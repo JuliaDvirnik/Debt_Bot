@@ -733,8 +733,10 @@ class debtBot:
             self.user_session[user_id] = new_session
             print("New session for " + user_name + " is created")
             print("State ", new_session.state, " for " + user_name)
-#pop jkj
-#pooooooo
+
+
+#ujujuj
+
 def main():
     print('starting...')
     debt_bot = debtBot(TOKEN)
