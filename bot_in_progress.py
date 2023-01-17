@@ -35,25 +35,23 @@ class Transaction:
         self.date = date
 
 
-class States:
-    def __init__(self):
-        self.start = 0
-        self.i_dept = 1
-        self.i_debt_to_person = 2
-        self.i_debt_to_person_money = 4  # + ожидается комментарий
-        self.i_create_new_debt = 10  # + ожидается подтверждение, верно всё или нет
-        self.i_request_debt = 11
-        self.i_request_debt_to_person = 12
-        self.i_request_debt_to_person_money = 13
-        self.i_create_new_query = 14  # + ожидается подтверждение, верно всё иил нет
-        self.show_summary = 5
-        self.show_detalization = 7
-        self.show_detalization_with_person = 8
+class user_states:  # Enumeration
+    start = 0
+    i_dept = 1
+    i_debt_to_person = 2
+    i_debt_to_person_money = 4  # + ожидается комментарий
+    i_create_new_debt = 10  # + ожидается подтверждение, верно всё или нет
+    i_request_debt = 11
+    i_request_debt_to_person = 12
+    i_request_debt_to_person_money = 13
+    i_create_new_query = 14  # + ожидается подтверждение, верно всё иил нет
+    show_summary = 5
+    show_detalization = 7
+    show_detalization_with_person = 8
 
-        self.default_states = [0, 1, 5, 7, 11]
+    default_states = [0, 1, 5, 7, 11]
 
 
-user_states = States()
 
 
 class Session:
@@ -65,8 +63,8 @@ class Session:
 class debtBot:
     def __init__(self, TOKEN):
 
-        bot = Bot(token=TOKEN) #todo перенесла сюда, дофига ошибок вышло
-        dp = Dispatcher(bot)
+        self.bot = Bot(token=TOKEN)
+        self.dp = Dispatcher(self.bot)
 
         # хранение транзакции в процессе её создания и состояние пользователя
         self.user_session = {}
@@ -78,6 +76,8 @@ class debtBot:
         self.administrator_id = 990039224
         self.users = {}
         self.google_folder_id = "10bBx8zxO1kqvmrEvKPQhq-fHdJjYPvx_"  # todo здесь резервная папка! надо, чтобы для каждого бота была своя
+
+        self.register_events()
 
         try:
             with open('transactions.pkl', 'rb') as f:
@@ -92,6 +92,48 @@ class debtBot:
         except FileNotFoundError:
             print("Dict of users did not loaded")
         print(self.users)
+
+    def start_polling(self):
+        print('go')
+        executor.start_polling(self.dp)
+        print('polling stopped')
+
+    def register_events(self):
+        # вместо декораторов
+        self.dp.register_message_handler(self.process_start_command, commands=['start'])
+        self.dp.register_message_handler(self.process_help_command, commands=['help'])
+        self.dp.register_message_handler(self.process_callback_amount)
+        self.dp.register_callback_query_handler(self.process_begining, lambda c: c.data == 'give_menu')
+        self.dp.register_callback_query_handler(self.process_callback_debt, lambda c: c.data == 'debt')
+        self.dp.register_callback_query_handler(self.process_callback_person_debt,
+                                                lambda c: c.data.startswith('debt_of_'))
+        self.dp.register_callback_query_handler(self.process_callback_user_checking_debt,
+                                                lambda c: c.data == 'user_checking_debt')
+        self.dp.register_callback_query_handler(self.process_callback_registration_debt,
+                                                lambda c: c.data == 'registration_debt')
+        self.dp.register_callback_query_handler(self.process_callback_reset_user_state,
+                                                lambda c: c.data == 'reset_user_state')
+        self.dp.register_callback_query_handler(self.process_callback_query_debt, lambda c: c.data == 'query_debt')
+        self.dp.register_callback_query_handler(self.process_callback_person_query_debt,
+                                                lambda c: c.data.startswith('query_debt_of_'))
+        self.dp.register_callback_query_handler(self.process_callback_user_checking_query_debt,
+                                                lambda c: c.data == 'user_checking_query_debt')
+        self.dp.register_callback_query_handler(self.process_callback_send_query_debt,
+                                                lambda c: c.data == 'send_query_debt')
+        self.dp.register_callback_query_handler(self.process_callback_registration_query_debt,
+                                                lambda c: c.data.startswith('query_'))
+        self.dp.register_callback_query_handler(self.process_callback_reset_query_debt,
+                                                lambda c: c.data.startswith('no_query_debt_'))
+        self.dp.register_callback_query_handler(self.process_callback_detalisation, lambda c: c.data == 'detalisation')
+        self.dp.register_callback_query_handler(self.process_callback_person_detalisation,
+                                                lambda c: c.data.startswith('detalisation_of_'))
+        self.dp.register_callback_query_handler(self.process_callback_numb_detalisation,
+                                                lambda c: c.data.startswith('detail_'))
+        self.dp.register_callback_query_handler(self.process_callback_summary, lambda c: c.data == 'summary')
+        self.dp.register_callback_query_handler(self.process_callback_allperson_summary,
+                                                lambda c: c.data.startswith('summary_all'))
+        self.dp.register_callback_query_handler(self.process_callback_person_summary,
+                                                lambda c: c.data.startswith('summary_of_'))
 
     # КОМАНДА СТАРТ
     async def process_start_command(self, message: types.Message):
@@ -238,7 +280,7 @@ class debtBot:
             message = "Поздравляю!\n" + user_name + " должен вам €" + str(amount) + "."
             if comment is not None:
                 message += "\nКоммент: " + comment
-            await bot.send_message(another_user_id, message)
+            await self.bot.send_message(another_user_id, message)
 
         else:
             await self.calling_reset_user_state(callback_query)
@@ -350,7 +392,7 @@ class debtBot:
             query_yes_btn = InlineKeyboardButton('Да, внести долг в базу', callback_data='query_' + str(user_id))
             query_no_btn = InlineKeyboardButton('Нет, у меня лапки', callback_data='no_query_debt_' + str(user_id))
             inline_kb = InlineKeyboardMarkup(row_width=1).add(query_yes_btn, query_no_btn)
-            await bot.send_message(another_user_id, message, reply_markup=inline_kb)
+            await self.bot.send_message(another_user_id, message, reply_markup=inline_kb)
 
             self.user_session[user_id].state = user_states.start
             print("State ", self.user_session[user_id].state, " for " + user_name)
@@ -389,7 +431,7 @@ class debtBot:
         # изменяем сообщение с подтверждением долга
         new_text = 'Здесь был запрос на долг от ' + creditor_name + " на сумму €" + str(
             amount) + ", который вы одобрили"
-        await bot.edit_message_text(chat_id=debitor_id, message_id=message_id, text=new_text)
+        await self.bot.edit_message_text(chat_id=debitor_id, message_id=message_id, text=new_text)
         # todo вопрос - удаляются ли кнопки, и редачится ли сообщение, если прошло больше 48 часов
 
         # сохраняем бекап на гугл диск
@@ -397,7 +439,7 @@ class debtBot:
 
         # пишем пользователю о новом долге
         message = "Неплохо!\n" + debitor_name + " одобрил запрошенный долг на сумму €" + str(amount) + "."
-        await bot.send_message(creditor_id, message)
+        await self.bot.send_message(creditor_id, message)
 
     # Функция, которая сохраняет бекап на гугл диск
     async def save_backups(self):
@@ -432,7 +474,7 @@ class debtBot:
         message = "WARNING!\n" + debitor_name + " отклонил запрошенный долг на сумму €" + str(
             amount) + "." + "\nПохоже," \
                             " вам есть, что обсудить"
-        await bot.send_message(creditor_id, message)
+        await self.bot.send_message(creditor_id, message)
 
         # изменяем сообщение с подтверждением долга
         new_text = 'Вы отклонили запрос на долг от ' + creditor_name + " на сумму €" + amount + ".\nПохоже, вам надо " \
@@ -440,7 +482,7 @@ class debtBot:
         await callback_query.message.answer(new_text)
         query_yes_btn = InlineKeyboardButton('Передумал, должен!', callback_data='query_' + str(creditor_id))
         inline_kb = InlineKeyboardMarkup().add(query_yes_btn)
-        await bot.edit_message_text(chat_id=debitor_id, message_id=message_id, text=text_message,
+        await self.bot.edit_message_text(chat_id=debitor_id, message_id=message_id, text=text_message,
                                     reply_markup=inline_kb)
         # todo вопрос - удаляются ли кнопки, и редачится ли сообщение, если прошло больше 48 часов
 
@@ -625,7 +667,7 @@ class debtBot:
         if user_id == self.administrator_id and message.text.startswith("@all "):
             message_for_all = message.text[5:]   # 5 is len of "@all "
             for user in self.users:
-                await bot.send_message(user, message_for_all)
+                await self.bot.send_message(user, message_for_all)
 
         if self.user_session[user_id].state == user_states.i_debt_to_person:
             transaction = self.user_session[user_id].transaction_in_progress
@@ -740,44 +782,7 @@ class debtBot:
 def main():
     print('starting...')
     debt_bot = debtBot(TOKEN)
-
-    # вместо декораторов
-    dp.register_message_handler(debt_bot.process_start_command, commands=['start'])
-    dp.register_message_handler(debt_bot.process_help_command, commands=['help'])
-    dp.register_message_handler(debt_bot.process_callback_amount)
-    dp.register_callback_query_handler(debt_bot.process_begining, lambda c: c.data == 'give_menu')
-    dp.register_callback_query_handler(debt_bot.process_callback_debt, lambda c: c.data == 'debt')
-    dp.register_callback_query_handler(debt_bot.process_callback_person_debt, lambda c: c.data.startswith('debt_of_'))
-    dp.register_callback_query_handler(debt_bot.process_callback_user_checking_debt,
-                                       lambda c: c.data == 'user_checking_debt')
-    dp.register_callback_query_handler(debt_bot.process_callback_registration_debt,
-                                       lambda c: c.data == 'registration_debt')
-    dp.register_callback_query_handler(debt_bot.process_callback_reset_user_state,
-                                       lambda c: c.data == 'reset_user_state')
-    dp.register_callback_query_handler(debt_bot.process_callback_query_debt, lambda c: c.data == 'query_debt')
-    dp.register_callback_query_handler(debt_bot.process_callback_person_query_debt,
-                                       lambda c: c.data.startswith('query_debt_of_'))
-    dp.register_callback_query_handler(debt_bot.process_callback_user_checking_query_debt,
-                                       lambda c: c.data == 'user_checking_query_debt')
-    dp.register_callback_query_handler(debt_bot.process_callback_send_query_debt, lambda c: c.data == 'send_query_debt')
-    dp.register_callback_query_handler(debt_bot.process_callback_registration_query_debt,
-                                       lambda c: c.data.startswith('query_'))
-    dp.register_callback_query_handler(debt_bot.process_callback_reset_query_debt,
-                                       lambda c: c.data.startswith('no_query_debt_'))
-    dp.register_callback_query_handler(debt_bot.process_callback_detalisation, lambda c: c.data == 'detalisation')
-    dp.register_callback_query_handler(debt_bot.process_callback_person_detalisation,
-                                       lambda c: c.data.startswith('detalisation_of_'))
-    dp.register_callback_query_handler(debt_bot.process_callback_numb_detalisation,
-                                       lambda c: c.data.startswith('detail_'))
-    dp.register_callback_query_handler(debt_bot.process_callback_summary, lambda c: c.data == 'summary')
-    dp.register_callback_query_handler(debt_bot.process_callback_allperson_summary,
-                                       lambda c: c.data.startswith('summary_all'))
-    dp.register_callback_query_handler(debt_bot.process_callback_person_summary,
-                                       lambda c: c.data.startswith('summary_of_'))
-
-    print('go')
-    executor.start_polling(dp)
-    print('polling stopped')
+    debt_bot.start_polling()
 
 
 # штука, котрая должна быть в конце, чтобы всё работало
