@@ -1,3 +1,4 @@
+# check commit
 # импортируем библиотеки для работы с ботом
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
