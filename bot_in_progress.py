@@ -14,11 +14,16 @@ from config import TOKEN
 import pickle
 import math
 
+#todo возможность переадресовывать долг
+#todo изменить сообщение, которое появляется после внесения долгов (не логичное - Петр)
+#(Ваш подытог с <>: е +80)
+#todo ваш долг записан (Алексей должен вам 000), а когда наоборот вы должны пользователю Алексей
+
 # для бэкапов
 gauth = GoogleAuth()
 scope = ['https://www.googleapis.com/auth/drive']
 gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    'bot-transaction-service-account-key.json', scope)
+    'bot-transaction-se1111rvice-account-key.json', scope)
 drive = GoogleDrive(gauth)
 
 
@@ -426,7 +431,7 @@ class debtBot:
         inline_kb = InlineKeyboardMarkup().add(continue_btn)
         await callback_query.message.answer("Ваш долг записан!\n\n" + summary_message + creditor_name,
                                             reply_markup=inline_kb)
-        print("New debt is written by " + str(debitor_id))
+        print("New debt is written by " + str(debitor_name))
 
         # изменяем сообщение с подтверждением долга
         new_text = 'Здесь был запрос на долг от ' + creditor_name + " на сумму €" + str(
@@ -553,7 +558,7 @@ class debtBot:
 
                     elif transaction.creditor_id == user_id and transaction.debitor_id == another_user_id:
                         amount = "+" + str(transaction.amount)
-                        text_message_1 = "{}\nСумма: {}".format(str(transaction.date)[0:11], amount)   # 11 is len of date (we dont take time)
+                        text_message_1 = "{}\n€ {}".format(str(transaction.date)[0:11], amount)   # 11 is len of date (we dont take time)
                         if transaction.comment is None:
                             text_message_1 += "\n\n"
                         else:
@@ -697,7 +702,7 @@ class debtBot:
                 await message.answer("То, что вы ввели, не похоже на сумму. Попробуйте ещё раз. \
                 \nИспользуйте только цифры. Можете использовать точку или запятую. \nНапример, вы можете ввести 4 или 4.0 или 4.25")
 
-        if self.user_session[user_id].state == user_states.i_request_debt_to_person:
+        elif self.user_session[user_id].state == user_states.i_request_debt_to_person:
             transaction = self.user_session[user_id].transaction_in_progress
             message_amount = message.text.replace(",", ".")
             try:
@@ -731,6 +736,7 @@ class debtBot:
             comment = message.text
             transaction.comment = comment
             transaction.date = message.date
+            print("Был введен комментарий: ", comment)
             await self.process_callback_user_checking_debt_message(message)
 
         elif self.user_session[user_id].state == user_states.i_request_debt_to_person_money:
@@ -738,6 +744,7 @@ class debtBot:
             comment = message.text
             transaction.comment = comment
             transaction.date = message.date
+            print("Был введен комментарий: ", comment)
             await self.process_callback_user_checking_query_debt_mes(message)
 
         else:
@@ -776,8 +783,6 @@ class debtBot:
             print("New session for " + user_name + " is created")
             print("State ", new_session.state, " for " + user_name)
 
-
-#ujujuj
 
 def main():
     print('starting...')
