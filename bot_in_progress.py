@@ -15,11 +15,6 @@ from config import TOKEN
 import pickle
 import math
 
-#todo возможность переадресовывать долг
-#todo изменить сообщение, которое появляется после внесения долгов (не логичное - Петр)
-#(Ваш подытог с <>: е +80)
-#todo ваш долг записан (Алексей должен вам 000), а когда наоборот вы должны пользователю Алексей
-
 # для бэкапов
 gauth = GoogleAuth()
 scope = ['https://www.googleapis.com/auth/drive']
@@ -791,6 +786,5 @@ def main():
     debt_bot.start_polling()
 
 
-# штука, котрая должна быть в конце, чтобы всё работало
 if __name__ == '__main__':
     main()
