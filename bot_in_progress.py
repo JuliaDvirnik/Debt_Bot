@@ -19,7 +19,7 @@ import math
 gauth = GoogleAuth()
 scope = ['https://www.googleapis.com/auth/drive']
 gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    'bot-transaction-se1111rvice-account-key.json', scope)
+    'bot-transaction-service-account-key.json', scope)
 drive = GoogleDrive(gauth)
 
 
@@ -237,7 +237,7 @@ class debtBot:
         transaction = self.user_session[user_id].transaction_in_progress
         transaction.date = message.date
         text_debt = "Должник: " + transaction.debitor_name + "\nКредитор: " + \
-                    transaction.creditor_name + "\nСумма: €" + str(transaction.amount)
+                    transaction.creditor_name + "\nСумма: €" + f'{transaction.amount:.2f}'
         if transaction.comment is not None:
             text_debt += "\nКомментарий: " + transaction.comment
         right_debt_btn = InlineKeyboardButton('Да, внести долг в базу', callback_data='registration_debt')
@@ -354,7 +354,7 @@ class debtBot:
         transaction = self.user_session[user_id].transaction_in_progress
         transaction.date = message.date
         text_debt = "Должник: " + transaction.debitor_name + "\nКредитор: " + \
-                    transaction.creditor_name + "\nСумма: €" + str(transaction.amount)
+                    transaction.creditor_name + "\nСумма: €" + f'{transaction.amount:.2f}'
         if transaction.comment is not None:
             text_debt += "\nКомментарий: " + transaction.comment
         right_debt_btn = InlineKeyboardButton('Да, отправить запрос на долг', callback_data='send_query_debt')
@@ -374,7 +374,7 @@ class debtBot:
             transaction = self.user_session[user_id].transaction_in_progress
             another_user_id = transaction.debitor_id
             another_user_name = transaction.debitor_name
-            amount = str(transaction.amount)
+            amount = f'{transaction.amount:.2f}'
             comment = transaction.comment
             continue_btn = InlineKeyboardButton('Го ещё что-нибудь сделаем', callback_data='give_menu')
             inline_kb = InlineKeyboardMarkup().add(continue_btn)
@@ -543,7 +543,7 @@ class debtBot:
                 if numb_check < numb_of_detail:
                     transaction = self.transaction_list[i]
                     if transaction.debitor_id == user_id and transaction.creditor_id == another_user_id:
-                        amount = "-" + str(transaction.amount)
+                        amount = "-" + f'{transaction.amount:.2f}'
                         text_message_1 = "{}\n€ {}".format(str(transaction.date)[0:11], amount)   # 11 is len of date (we dont take time)
                         if transaction.comment is None:
                             text_message_1 += "\n\n"
@@ -553,7 +553,7 @@ class debtBot:
                         numb_check += 1
 
                     elif transaction.creditor_id == user_id and transaction.debitor_id == another_user_id:
-                        amount = "+" + str(transaction.amount)
+                        amount = "+" + f'{transaction.amount:.2f}'
                         text_message_1 = "{}\n€ {}".format(str(transaction.date)[0:11], amount)   # 11 is len of date (we dont take time)
                         if transaction.comment is None:
                             text_message_1 += "\n\n"
