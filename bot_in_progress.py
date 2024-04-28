@@ -653,9 +653,9 @@ class debtBot:
             else:
                 continue
         if summary > 0:
-            text_message = "Вам должен €" + str(summary) + " этот человек: "
+            text_message = f"Вам должен €{summary:.2f} этот человек: "
         elif summary < 0:
-            text_message = "Вы должны €" + str(summary)[1:] + " этому человеку: "
+            text_message = f"Вы должны €{-summary:.2f} этому человеку: "
         else:
             text_message = "У вас нулевые долги с этим человеком: "
         return text_message
